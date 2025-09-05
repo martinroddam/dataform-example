@@ -1,0 +1,28 @@
+name: Dataform SQLX Linter
+
+on:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # (optional) gather changed files similar to your existing workflow
+      - name: Compute changed SQLX files
+        id: changed
+        run: |
+          git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...origin/${{ github.head_ref }} | grep '\.sqlx$' | paste -sd,)
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Changed: $CHANGED"
+
+      - name: Run Dataform SQLX Linter
+        uses: martinroddam/dataform-sqlx-linter/.github/actions/run-checks@main
+        with:
+          files: ${{ steps.changed.outputs.files }}
+          # include: description,columns
+          # exclude: schema
+          # config: .github/dataform-checks.yml
+          # fail-fast: "true"
