@@ -1,0 +1,8 @@
+# Run only these checks (omit to run all)
+# include: ["description", "schema", "columns", "hardcoded_fqns"]
+
+# Skip these checks
+# exclude: ["schema"]
+
+# Stop immediately on first failing check
+# fail_fast: true

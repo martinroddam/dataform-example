@@ -1,0 +1,6 @@
+config {
+    type: "table"
+}
+
+SELECT true AS is_funky
+FROM `some_dataset.some_table`

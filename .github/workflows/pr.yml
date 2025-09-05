@@ -1,0 +1,73 @@
+name: Dataform SQLX Linter
+
+on:
+  pull_request:
+
+jobs:
+  compile-check:
+    name: Dataform Compile Check
+    runs-on: ubuntu-latest
+    outputs:
+      compiled-graph-path: ${{ steps.set-output.outputs.path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dataform
+        uses: docker://dataformco/dataform:2.9.0
+        with:
+          args: install
+
+      - name: Run dataform compile (with JSON output)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            dataformco/dataform:2.9.0 \
+            compile --timeout=5m --json > compiled_graph.json
+
+      - name: Set compiled output path
+        id: set-output
+        run: echo "path=compiled_graph.json" >> $GITHUB_OUTPUT
+
+      - name: Upload compiled graph
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-graph
+          path: compiled_graph.json
+
+  coding-standards:
+    needs: compile-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download compiled graph from compile job
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-graph
+
+      # (optional) gather changed files similar to your existing workflow
+      - name: Compute changed SQLX files
+        id: changed
+        run: |
+          git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...origin/${{ github.head_ref }} | grep '\.sqlx$' | paste -sd,)
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Changed: $CHANGED"
+
+      - name: Install linter
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install git+https://github.com/martinroddam/dataform-sqlx-linter@main
+
+      - name: Run linter
+        if: steps.changed.outputs.files != ''
+        run: |
+          IFS=',' read -ra FILES <<< "${{ steps.changed.outputs.files }}"
+          # Run all checks by default
+          python -m dataform_sqlx_linter "${FILES[@]}" \
+            --config .github/dataform-checks.yml
