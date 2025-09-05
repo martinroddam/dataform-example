@@ -30,12 +30,3 @@ jobs:
           # Run all checks by default
           python -m dataform_sqlx_linter "${FILES[@]}" \
             --config .github/dataform-checks.yml
-
-      - name: Run Dataform SQLX Linter
-        uses: martinroddam/dataform-sqlx-linter/.github/actions/run-checks@main
-        with:
-          files: ${{ steps.changed.outputs.files }}
-          # include: description,columns
-          # exclude: schema
-          # config: .github/dataform-checks.yml
-          # fail-fast: "true"
